@@ -2920,6 +2920,19 @@ const r3Css = document.createElement('style'); r3Css.textContent = `
 .r3c button{margin-top:6px;justify-self:start;border-radius:10px;padding:8px 14px;font:600 14px Inter,system-ui,sans-serif;border:1px solid #3a3f46;background:none;color:inherit;cursor:pointer}.r3c button.pri{background:#eef0f2;color:#0a0b0d;border:0}`;
 document.head.appendChild(r3Css);
 
+/* ---------- 32. Show top 3, keep the full check behind a toggle ---------- */
+const _sp24 = supplyPanel;
+supplyPanel = function(){
+  let h = _sp24();
+  if(S.buySel != null){ const b = BUY[S.buySel], n = Object.keys(b[6]).length;
+    h = h.replace('<div class="r3">', `<p class="cmpwhy" style="margin:0">Rosa checked all ${n} of your vendor account${n > 1 ? 's' : ''} and ranked them by total cost per unit, including shipping and delivery time. Her 1st choice is the most cost-effective.</p><div class="r3">`);
+    h = h.replace(/(<\/div>\s*)(<div class="tw"><table class="lc"><thead><tr><th>Vendor<\/th>[\s\S]*?<\/table><\/div>)/, `$1<details class="allv"><summary>See all ${n} vendors Rosa checked</summary>$2</details>`);
+  }
+  return h;
+};
+const avCss = document.createElement('style'); avCss.textContent = `.allv summary{cursor:pointer;font-size:14px;color:var(--muted);padding:4px 0}.allv[open] summary{margin-bottom:6px}`;
+document.head.appendChild(avCss);
+
 document.addEventListener('click', e => {
   if(e.target.closest('#shx')){ document.getElementById('starthere').hidden = true; return; }
   const b = e.target.closest('[data-start]'); if(!b) return;
