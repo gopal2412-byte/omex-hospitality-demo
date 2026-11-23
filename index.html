@@ -2894,6 +2894,32 @@ const rpCss = document.createElement('style'); rpCss.textContent = `
 table.rpt td{font-size:14px}table.rpt small{font-size:12.5px}`;
 document.head.appendChild(rpCss);
 
+/* ---------- 31. Top 3 vendor recommendations ---------- */
+function top3(b){ return priceRows(b).filter(r => !r.late).slice(0, 3); }
+const _sp23 = supplyPanel;
+supplyPanel = function(){
+  let h = _sp23();
+  if(S.buySel != null){ const b = BUY[S.buySel], T = top3(b), c = buyCalc(b), wd = unitWord(b[1]);
+    const cards = `<div class="r3">${T.map((r, k) => `<div class="r3c ${k === 0 ? 'one' : ''}"><span>${k === 0 ? 'ROSA’S 1ST CHOICE' : k === 1 ? '2ND CHOICE' : '3RD CHOICE'}</span><b>${VEND[r.v]}</b><em>${money(r.tot)}</em><small>${money(r.unit)} per ${wd} · ${r.ship ? money(r.ship) + ' shipping' : 'free shipping'} · arrives ${addDays(r.days)}${k ? ` · +${money(r.tot - T[0].tot)}` : ''}</small><button class="${k === 0 ? 'pri' : 'sec'}" data-act="buyPick" data-arg="${S.buySel}|${r.v}">Order from ${VEND[r.v].split(' ')[0]}</button></div>`).join('')}${b[5] ? '<p class="cmpwhy">Brand-required item: Hilton Supply Management is the only option.</p>' : ''}</div>`;
+    h = h.replace(/<div class="rpick">[\s\S]*?<\/div>/, m => m + cards);
+    h = h.replace(/<div class="acts"><button class="pri" data-act="buyOne"[\s\S]*?<\/div><\/div>/, '</div>');
+  }
+  return h;
+};
+A.buyPick = a => { const [i, v] = a.split('|'), b = BUY[+i], r = priceRows(b).find(x => x.v === v), c = buyCalc(b); b[2] += c.qty; gtoast(`Ordered ${c.qty} × ${b[1]} of ${b[0].toLowerCase()} from ${VEND[v]} for ${money(r.tot)}. Arrives ${addDays(r.days)}. Logged.`); S.buySel = null; render(); };
+const _ex23 = excList;
+excList = function(){
+  const L = _ex23(), e = L.find(x => x.id === 'buy');
+  if(e) e.viz = `<div class="tw"><table class="lc rpt"><thead><tr><th>Item</th><th>1st choice (Rosa)</th><th>2nd</th><th>3rd</th></tr></thead><tbody>${e.items.map(c => { const b = BUY.find(x => x[0] === c.n), T = top3(b), cell = (r, k) => r ? `<td>${k === 0 ? '<b>' : ''}${VEND[r.v]}${k === 0 ? '</b>' : ''}<br><small>${money(r.tot)} · ${addDays(r.days)}${k ? ` · +${money(r.tot - T[0].tot)}` : ''}</small></td>` : `<td><small>${k === 1 && b[5] ? 'Brand: only option' : '–'}</small></td>`; return `<tr><td>${c.n}<br><small>${buyCalc(b).qty} × ${b[1]}</small></td>${[0, 1, 2].map(k => cell(T[k], k)).join('')}</tr>`; }).join('')}</tbody></table></div>`;
+  return L;
+};
+const r3Css = document.createElement('style'); r3Css.textContent = `
+.r3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}@media (max-width:700px){.r3{grid-template-columns:minmax(0,1fr)}}
+.r3c{display:grid;gap:4px;align-content:start;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}.r3c.one{border-color:#3d6b4c;background:#0f2418}
+.r3c span{font:600 11px "JetBrains Mono",ui-monospace,monospace;letter-spacing:.14em;color:#8a9098}.r3c.one span{color:#8fd3a5}.r3c b{font-size:16px}.r3c em{font-style:normal;font:700 22px var(--display)}.r3c small{font-size:13px;color:var(--muted)}
+.r3c button{margin-top:6px;justify-self:start;border-radius:10px;padding:8px 14px;font:600 14px Inter,system-ui,sans-serif;border:1px solid #3a3f46;background:none;color:inherit;cursor:pointer}.r3c button.pri{background:#eef0f2;color:#0a0b0d;border:0}`;
+document.head.appendChild(r3Css);
+
 document.addEventListener('click', e => {
   if(e.target.closest('#shx')){ document.getElementById('starthere').hidden = true; return; }
   const b = e.target.closest('[data-start]'); if(!b) return;
