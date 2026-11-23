@@ -2830,6 +2830,46 @@ const ecCss = document.createElement('style'); ecCss.textContent = `
 .cbars{display:grid;gap:6px;max-width:460px}.cbars div{display:grid;grid-template-columns:60px 1fr 44px;align-items:center;gap:8px;font-size:14px}.cbars i{display:block;height:8px;border-radius:99px;background:#23272d;overflow:hidden}.cbars em{display:block;height:100%}.cbars b{font-size:14px;text-align:right}.cbars small{color:#6f767e;font-size:12.5px}`;
 document.head.appendChild(ecCss);
 
+/* ---------- 29. Price comparison across the hotel's business accounts ---------- */
+const VSHIP = {hsm:{min:0, fee:0, days:5, note:'Brand program'}, hd:{min:49, fee:9.99, days:2, note:'Free over $49'}, sams:{min:0, fee:0, days:2, note:'Plus membership'}, costco:{min:0, fee:0, days:3, note:'Business delivery'}, wm:{min:35, fee:6.99, days:2, note:'Free over $35'}, amz:{min:0, fee:0, days:1, note:'Business Prime'}};
+const packUnits = u => { const m = u.match(/([\d,]+)/); return u.startsWith('dozen') ? 12 : m ? +m[1].replace(',', '') : 1; };
+const unitWord = u => u.startsWith('dozen') ? 'piece' : ((u.match(/of [\d,]+ ?(.*)$/) || [])[1] || 'unit').replace(/s$/, '');
+const addDays = d => { const x = new Date(Date.now() + d * 864e5); return x.toLocaleDateString('en-US', {weekday:'short', month:'2-digit', day:'2-digit', timeZone:'America/Chicago'}); };
+function priceRows(b){
+  const c = buyCalc(b), [n, u, , , , brand, pr] = b, per = packUnits(u);
+  return Object.entries(pr).map(([v, p]) => { const s = VSHIP[v], sub = p * c.qty, ship = sub >= s.min ? 0 : s.fee, tot = sub + ship;
+    return {v, p, sub, ship, tot, unit:tot / (c.qty * per), days:s.days, note:s.note, late:s.days > c.days}; })
+    .sort((a, z) => (a.late - z.late) || (a.unit - z.unit) || (a.days - z.days));
+}
+S.buySel = null;
+const _sp21 = supplyPanel;
+supplyPanel = function(){
+  let h = _sp21();
+  h = h.replace('<div class="buylim">', `<div class="accts"><span>Connected business accounts:</span>${['amz','wm','sams','costco','hd','hsm'].map(v => `<b>${I('checkc')}${VEND[v]}</b>`).join('')}<small>Prices refresh every morning at 6 AM and before each order (sample prices in this demo).</small></div><div class="buylim">`);
+  h = h.replace(/<td>([^<]+)<br><small>([^<]+)<\/small><\/td><td>(\d+)<\/td>/g, (m, n, u, oh) => { const i = BUY.findIndex(b => b[0] === n); return i < 0 ? m : `<td><button class="cmpbtn" data-act="buyCmp" data-arg="${i}" aria-expanded="${S.buySel === i}">${n}</button><br><small>${u}</small></td><td>${oh}</td>`; });
+  if(S.buySel != null){
+    const b = BUY[S.buySel], c = buyCalc(b), R = priceRows(b), best = R[0], wd = unitWord(b[1]);
+    const box = `<div class="cmpbox" id="cmpbox"><div class="cmph"><b>${b[0]}: ${c.qty} × ${b[1]}</b><button class="sec" data-act="buyCmp" data-arg="${S.buySel}">Close</button></div>
+    <div class="tw"><table class="lc"><thead><tr><th>Vendor</th><th>Pack price</th><th>Shipping</th><th>Total for ${c.qty}</th><th>Cost per ${wd}</th><th>Arrives</th><th></th></tr></thead><tbody>
+    ${R.map((r, k) => `<tr class="${k === 0 ? 'best' : ''}"><td>${VEND[r.v]}<br><small>${r.note}</small></td><td>${money(r.p)}</td><td>${r.ship ? money(r.ship) : 'Free'}</td><td><b>${money(r.tot)}</b></td><td>${money(r.unit)}</td><td>${addDays(r.days)}${r.late ? '<br><small style="color:#ff8a78">after you run out</small>' : ''}</td><td>${k === 0 ? '<span class="pill info">Rosa’s pick</span>' : `+${money(r.tot - best.tot)}`}</td></tr>`).join('')}</tbody></table></div>
+    <p class="cmpwhy">${b[5] ? 'Brand-required item: bought through Hilton Supply Management or an approved vendor only.' : `Rosa’s pick: ${VEND[best.v]}, the lowest cost per ${wd} including shipping that still arrives before you run out (${c.days} days of stock left). Sales tax is the same at every vendor, so it doesn’t change the pick.`}</p>
+    <div class="acts"><button class="pri" data-act="buyOne" data-arg="${S.buySel}">${(S.buyLim && best.tot <= S.buyLim) ? 'Order now (within Rosa’s limit)' : `Approve order, ${money(best.tot)}`}</button></div></div>`;
+    h = h.replace('<div class="answer"><b>' + I('ai') + ' Rosa suggests</b>', box + '<div class="answer"><b>' + I('ai') + ' Rosa suggests</b>');
+  }
+  return h;
+};
+Object.assign(A, {
+  buyCmp:i => { S.buySel = S.buySel === +i ? null : +i; render(); if(S.buySel != null) setTimeout(() => { const e = document.getElementById('cmpbox'); if(e) e.scrollIntoView({block:'nearest', behavior:'smooth'}); }, 30); },
+  buyOne:i => { const b = BUY[+i], R = priceRows(b), best = R[0], c = buyCalc(b); b[2] += c.qty; gtoast(`Ordered ${c.qty} × ${b[1]} of ${b[0].toLowerCase()} from ${VEND[best.v]} for ${money(best.tot)}. Arrives ${addDays(best.days)}. Logged.`); S.buySel = null; render(); },
+});
+const cmpCss = document.createElement('style'); cmpCss.textContent = `
+.accts{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;font-size:13px;color:var(--muted)}.accts b{display:inline-flex;align-items:center;gap:4px;color:var(--fg);font-weight:600}.accts b svg{width:14px;height:14px;color:#8fd3a5}.accts small{flex-basis:100%;font-size:12px}
+.cmpbtn{background:none;border:0;padding:0;color:inherit;font:inherit;text-decoration:underline;text-decoration-color:#5b6068;text-underline-offset:3px;cursor:pointer;text-align:left}.cmpbtn[aria-expanded="true"]{text-decoration-color:#8fd3a5}
+.cmpbox{display:grid;gap:10px;border:1px solid #3d6b4c;border-radius:14px;padding:12px 14px;background:var(--surface-2)}.cmph{display:flex;justify-content:space-between;align-items:center;gap:10px}.cmph b{font-size:16px}
+.cmpbox tr.best td{background:rgba(143,211,165,.08)}.cmpwhy{margin:0;font-size:14px;color:var(--muted)}
+.cmpbox .acts button,.cmph button{border-radius:12px;padding:9px 16px;font:600 15px Inter,system-ui,sans-serif;border:1px solid #3a3f46;background:none;color:inherit;cursor:pointer}.cmpbox .acts button.pri{background:#eef0f2;color:#0a0b0d;border:0}`;
+document.head.appendChild(cmpCss);
+
 document.addEventListener('click', e => {
   if(e.target.closest('#shx')){ document.getElementById('starthere').hidden = true; return; }
   const b = e.target.closest('[data-start]'); if(!b) return;
