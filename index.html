@@ -2933,6 +2933,131 @@ supplyPanel = function(){
 const avCss = document.createElement('style'); avCss.textContent = `.allv summary{cursor:pointer;font-size:14px;color:var(--muted);padding:4px 0}.allv[open] summary{margin-bottom:6px}`;
 document.head.appendChild(avCss);
 
+/* ---------- 33. Staff safety button, lost and found, preventive maintenance, food safety ---------- */
+/* 33a. staff safety button on housekeeping and maintenance phones */
+Object.assign(W.en, {safeT:'Safety button', safeSub:'Hold 2 seconds if you feel unsafe. Help comes to room {r}.', safeEsc:'Front desk and the manager on duty are alerted now. If no one answers in 60 seconds, Shelby is called. You can call 911 at any time.'});
+Object.assign(W.es, {safeT:'Botón de seguridad', safeSub:'Mantén 2 segundos si te sientes en peligro. La ayuda llega al cuarto {r}.', safeEsc:'Recepción y el gerente de turno ya saben. Si nadie contesta en 60 segundos, se llama a Shelby. Puedes llamar al 911 cuando quieras.'});
+const curRoom = p => { const f = S.flow; if(f && f.kind === 'task' && p.tasks[f.i] && p.tasks[f.i].room) return p.tasks[f.i].room; const nx = p.tasks.find(x => x.room && !x.done); return nx ? nx.room : p.dept === 'mt' ? '214' : '—'; };
+const _home25 = homeTab;
+homeTab = function(p){
+  const h = _home25(p); if(!['hk','mt'].includes(p.dept)) return h;
+  const r = curRoom(p);
+  return `<div class="card safecard"><div><h3>${I('shield')}${t('safeT')}</h3><div class="sub">${t('safeSub', {r})}</div></div><button class="sosbtn sosmini" id="sos" aria-label="${t('safeT')}. ${t('sosHold')}"><span class="fill" id="sosfill"></span><span>SOS</span></button></div>` + h;
+};
+const _sos25 = sosFire;
+sosFire = function(){
+  const p = me(), r = curRoom(p);
+  _sos25();
+  const rv = S.reviews[0]; if(rv && rv.kind === 'sos'){ rv.body = `Safety button held at ${tmEn(now())}. Room ${r}, floor ${String(r).charAt(0)} (from her task and phone location). Front desk and manager on duty alerted; Shelby called if no answer in 60 seconds. 911 one tap away.`; }
+  S.sosLive = {who:p.name, room:r, at:now()}; S.excDone.sosnow = false;
+};
+/* 33b. lost and found */
+S.lnfHold = 90;
+const LNF = [
+  {it:'Wireless earbuds', room:'318', by:'Elena Medina', d:0, val:true, st:'Guest not contacted'},
+  {it:'Black phone charger', room:'205', by:'Maria Gonzalez', d:3, val:false, st:'Guest emailed'},
+  {it:'Child’s jacket (blue)', room:'412', by:'Lupe Herrera', d:12, val:false, st:'Guest emailed, no reply'},
+  {it:'Prescription glasses', room:'109', by:'Maria Gonzalez', d:40, val:true, st:'Shipping label sent'},
+  {it:'Gold ring', room:'Pool', by:'Luis Ramirez', d:64, val:true, st:'No owner found'},
+  {it:'Jeans, 2 T-shirts', room:'221', by:'Elena Medina', d:96, val:false, st:'Hold ended'},
+  {it:'Phone (locked)', room:'Lobby', by:'James Carter', d:101, val:true, st:'Hold ended'},
+];
+const lnfDue = () => LNF.filter(x => x.d >= S.lnfHold && !x.gone);
+function lnfPanel(){
+  const due = (x) => { const left = S.lnfHold - x.d; return left > 0 ? `${left} days left` : 'Hold ended'; };
+  return `<section class="panel"><div class="ph"><h2>${I('box')}Lost and found</h2><span style="color:var(--muted);font-size:13px">The finder takes a photo; Rosa logs the room, date and finder, drafts the guest notice and tracks the hold. Valuables (phones, jewelry, wallets, medicine) go in the locked cabinet with two signatures.</span></div>
+  <div class="buylim"><label for="lnfHold">Hold items for</label><select id="lnfHold" data-lnfhold>${[30, 60, 90].map(v => `<option value="${v}" ${S.lnfHold === v ? 'selected' : ''}>${v} days</option>`).join('')}</select><span style="color:var(--muted)">Sample policy. Confirm with Hilton and Texas rules.</span></div>
+  <div class="tw"><table class="lc"><thead><tr><th>Photo</th><th>Item</th><th>Where</th><th>Found by</th><th>Found</th><th>Guest</th><th>Hold</th></tr></thead><tbody>
+  ${LNF.filter(x => !x.gone).map(x => `<tr><td><span class="lph">${I('camera')}</span></td><td>${x.it}${x.val ? ' <span class="pill warn">Locked</span>' : ''}</td><td>${x.room}</td><td>${x.by.split(' ')[0]}</td><td>${fdate(new Date(Date.now() - x.d * 864e5))}</td><td>${x.st}</td><td>${due(x)}</td></tr>`).join('')}</tbody></table></div>
+  <div class="answer"><b>${I('ai')} After the hold ends</b> Rosa suggests donating clothing and everyday items to a local charity, and handing phones and valuables to the police or destroying data under a witness. Every step is logged with photos. Nothing is thrown away without Shelby’s yes.</div></section>`;
+}
+/* 33c. preventive maintenance calendar */
+const PM = [ // task, how often, last done (days ago), every (days), who, note
+  ['PTAC filters: floor 2 (24 rooms)', 'Every month, one floor a week', 33, 30, 'Luis', 'Overdue 3 days'],
+  ['PTAC deep clean: floor 4', 'Every 3 months', 80, 90, 'Luis', ''],
+  ['Elevator certificate (state inspection)', 'Every year', 368, 365, 'Licensed contractor', 'Expired 3 days ago'],
+  ['Fire alarm system inspection', 'Every year', 301, 365, 'Licensed fire contractor', ''],
+  ['Sprinkler inspection', 'Every 3 months', 86, 90, 'Licensed fire contractor', ''],
+  ['Fire extinguishers: monthly check', 'Every month', 27, 30, 'Luis', ''],
+  ['Emergency lights and exit signs test', 'Every month', 29, 30, 'Luis', ''],
+  ['Pool chemistry and log', 'Every day', 0, 1, 'Luis', 'Done today, 2.0 ppm'],
+  ['Kitchen hood cleaning', 'Every 6 months', 150, 180, 'Hood contractor', ''],
+  ['Backflow preventer test', 'Every year', 340, 365, 'Licensed plumber', ''],
+];
+const pmLeft = r => r[3] - r[2];
+const pmWeek = () => PM.filter(r => pmLeft(r) <= 7);
+function pmPanel(){
+  const R = [...PM].sort((a, b) => pmLeft(a) - pmLeft(b));
+  return `<section class="panel"><div class="ph"><h2>${I('wrench')}Preventive maintenance</h2><span style="color:var(--muted);font-size:13px">Rosa keeps the schedule, books contractors ahead of due dates and assigns in-house work to maintenance in their language. Each job closes with a photo.</span></div>
+  <div class="tw"><table class="lc"><thead><tr><th>Job</th><th>How often</th><th>Due</th><th>Who</th><th>Status</th></tr></thead><tbody>
+  ${R.map(r => { const l = pmLeft(r); return `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${fdate(new Date(Date.now() + l * 864e5))}</td><td>${r[4]}</td><td>${l < 0 ? `<span class="pill warn">${r[5] || 'Overdue'}</span>` : l <= 7 ? '<span class="pill info">This week</span>' : `<span style="color:var(--muted)">${r[5] || l + ' days'}</span>`}</td></tr>`; }).join('')}</tbody></table></div>
+  <div class="answer"><b>${I('ai')} Why it matters</b> Clean PTAC filters cut power use and guest complaints. Fire and elevator inspections are required by law and by the brand. Intervals are typical; confirm with local code and the Hilton manual.</div></section>`;
+}
+/* 33d. breakfast food safety log */
+const FOOD = [ // check, reading, limit, ok, fix
+  ['Walk-in cooler', '36°F', '41°F or below', true, ''],
+  ['Reach-in fridge (buffet)', '44°F', '41°F or below', false, 'Move milk, yogurt and cut fruit to the walk-in now. Repair call booked.'],
+  ['Freezer', '-2°F', '0°F or below', true, ''],
+  ['Hot holding: scrambled eggs', '146°F', '135°F or above', true, ''],
+  ['Hot holding: sausage', '128°F', '135°F or above', false, 'Reheat to 165°F, or throw away if it has been below 135°F for more than 2 hours.'],
+  ['Date labels and expiry', '2 yogurts expired', 'Nothing past date', false, 'Thrown away with a photo at 6:20 AM.'],
+  ['Hand sink stocked', 'Soap and towels', 'Stocked', true, ''],
+];
+function foodPanel(){
+  return `<section class="panel"><div class="ph"><h2>${I('coffee')}Breakfast food safety log</h2><span style="color:var(--muted);font-size:13px">Today, 6:10 AM, by the breakfast attendant. Each reading has a photo of the thermometer or probe. Checked again at 8:00 and 10:00 AM.</span></div>
+  <div class="tw"><table class="lc"><thead><tr><th>Check</th><th>Reading</th><th>Safe range</th><th>Result</th><th>Rosa’s fix</th></tr></thead><tbody>
+  ${FOOD.map(r => `<tr><td>${r[0]}</td><td><b>${r[1]}</b></td><td>${r[2]}</td><td>${r[3] ? '<span style="color:#8fd3a5">OK</span>' : '<span class="pill warn">Out of range</span>'}</td><td>${r[4] || '–'}</td></tr>`).join('')}</tbody></table></div>
+  <div class="answer"><b>${I('ai')} Rules used</b> Cold food at 41°F or below, hot food at 135°F or above, reheat to 165°F (FDA Food Code, which Texas follows). Logs are kept for health inspections and Hilton quality audits.</div></section>`;
+}
+/* tabs */
+[['lnf','Lost & found', lnfPanel], ['pm','Maintenance calendar', pmPanel], ['food','Food safety', foodPanel]].forEach(([k, lb]) => { GROUPS.hotel[1].push(k); TAB_LB[k] = lb; GM_TABS.push([k, lb]); });
+const PANELS25 = {lnf:lnfPanel, pm:pmPanel, food:foodPanel};
+const _gm25 = gmScreen;
+gmScreen = function(){
+  const k = S.gmTab; if(!PANELS25[k]) return _gm25();
+  S.gmTab = 'comply'; let h = _gm25(); S.gmTab = k;
+  h = h.replace(compPanel(), PANELS25[k]());
+  return h.replace('data-arg="comply" aria-current="page"', 'data-arg="comply" ').replace(new RegExp(`data-arg="${k}" (?=>)`), `data-arg="${k}" aria-current="page"`);
+};
+document.addEventListener('change', e => { if(e.target.matches && e.target.matches('[data-lnfhold]')){ S.lnfHold = +e.target.value; gtoast(`Lost and found items are now held ${S.lnfHold} days.`); render(); } });
+/* Rosa suggestions */
+PRIO[0][2].push('sosnow'); PRIO[1][2].push('food');
+const _ex25 = excList;
+excList = function(){
+  const L = _ex25(); const add = o => { if(!S.excDone[o.id]) L.push(o); };
+  if(S.sosLive && !S.excDone.sosnow) L.unshift({id:'sosnow', cat:'safety', t:`${S.sosLive.who} held the safety button in room ${S.sosLive.room} at ${tmEn(S.sosLive.at)}`, acts:[
+    ['Yes, call her and send help', `Calling ${S.sosLive.who.split(' ')[0]} now. James and the manager on duty are going to room ${S.sosLive.room}.`],
+    ['Call 911 now', 'Calling 911. The front desk will meet responders at the entrance.'],
+    ['She is safe, close it', 'Closed. Logged with the time and who checked.']]});
+  const bad = FOOD.filter(r => !r[3]);
+  add({id:'food', cat:'safety', t:`Breakfast check at 6:10 AM: ${bad.map(r => r[0].toLowerCase() + ' ' + r[1]).join(', ')}`, acts:[
+    ['Yes, fix it now', 'Breakfast team told: sausage reheated to 165°F, buffet fridge items moved to the walk-in, repair booked for 11 AM.'],
+    ['Throw the sausage away', 'Sausage thrown away with a photo. Fresh batch started.'],
+    ['Show the log', () => { S.gmTab = 'food'; return null; }]]});
+  const w = pmWeek();
+  if(w.length) add({id:'pmweek', cat:'safety', n:w.length, t:`${w.length} preventive maintenance jobs are due this week, 2 are overdue`, acts:[
+    ['Yes, assign and book', `Luis got his ${w.filter(r => r[4] === 'Luis').length} jobs in Spanish. Contractors booked for the rest.`],
+    ['Only the overdue ones', 'Overdue jobs assigned for today.'],
+    ['Show the calendar', () => { S.gmTab = 'pm'; return null; }]]});
+  const ld = lnfDue();
+  if(ld.length) add({id:'lnfexp', cat:'guest', n:ld.length, t:`${ld.length} lost and found items passed the ${S.lnfHold}-day hold: ${ld.map(x => x.it.toLowerCase()).join(', ')}`, acts:[
+    ['Yes, donate and hand over', () => { ld.forEach(x => x.gone = true); return 'Clothing donated with a photo receipt. The phone goes to the police lost property office. Logged.'; }],
+    ['Keep 30 more days', () => { ld.forEach(x => x.d -= 30); return 'Kept 30 more days.'; }],
+    ['Show lost and found', () => { S.gmTab = 'lnf'; return null; }]]});
+  return L;
+};
+ASK.unshift(
+  [/^sosnow$/, e => [`Shall I call ${S.sosLive.who.split(' ')[0]} now and send the front desk and manager on duty to room ${S.sosLive.room}?`, 'Staff safety comes first. Hilton has committed to staff safety devices under the AHLA 5-Star Promise (confirm the exact requirement with Hilton). 911 is one tap away.']],
+  [/^food$/, e => ['Shall I tell the breakfast team to reheat the sausage to 165°F and move the buffet fridge items to the walk-in, then book a repair?', 'Food held between 41°F and 135°F is unsafe after 2 hours (FDA Food Code). Protects guests and the health inspection score.']],
+  [/^pmweek$/, e => [`Shall I assign this week’s ${e.n} maintenance jobs to Luis and book the contractors?`, 'PTAC filters and fire checks are cheaper than repairs and failed inspections. The overdue elevator certificate is already in your list above.']],
+  [/^lnfexp$/, e => [`Shall I donate the ${e.n} expired items to charity and hand the phone to the police?`, 'Guests were contacted and the hold has ended. Photos and receipts are kept. Hold period is a sample policy; confirm with Hilton and Texas rules.']]
+);
+const l25Css = document.createElement('style'); l25Css.textContent = `
+.safecard{display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left}.safecard h3{margin:0 0 4px}
+.sosbtn.sosmini{width:84px;height:84px;flex:0 0 84px;font-size:22px;font-weight:800;letter-spacing:.04em;position:relative;overflow:hidden}
+.lph{display:inline-grid;place-items:center;width:40px;height:32px;border-radius:8px;background:var(--surface-2);border:1px solid var(--line);color:var(--muted)}.lph svg{width:18px;height:18px}`;
+document.head.appendChild(l25Css);
+
 document.addEventListener('click', e => {
   if(e.target.closest('#shx')){ document.getElementById('starthere').hidden = true; return; }
   const b = e.target.closest('[data-start]'); if(!b) return;
