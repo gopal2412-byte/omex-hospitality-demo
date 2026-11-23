@@ -2715,7 +2715,7 @@ excList = function(){
       ['Open the room board', () => { S.gmTab = 'rooms'; return null; }]]});
   const d = buyNow();
   if(d.length && !S.buyDone){ const tot = d.reduce((s, c) => s + c.cost, 0), sav = d.reduce((s, c) => s + c.save, 0), vs = [...new Set(d.map(c => c.brand ? 'Hilton Supply Management' : VEND[c.bv]))];
-    add({id:'buy', cat:'money', tot, sav, vs, items:d, t:`${d.length} items hit their reorder point: ${d.map(c => c.n.toLowerCase()).join(', ')}`, acts:[
+    add({id:'buy', cat:'money', tot, sav, vs, items:d, t:`${d.length} items hit their reorder point: ${d.map(c => c.n).join(', ')}`, acts:[
       ['Yes, place the orders', () => { S.buyDone = true; return `${d.length} orders placed with ${vs.join(', ')} for ${money(tot)}. Rosa will track delivery.`; }],
       ['Only what’s under my limit', () => `Ordered the items under ${money(S.buyLim)}. The rest wait for you.`],
       ['Show me the list', () => { S.gmTab = 'supply'; return null; }]]}); }
@@ -2869,6 +2869,30 @@ const cmpCss = document.createElement('style'); cmpCss.textContent = `
 .cmpbox tr.best td{background:rgba(143,211,165,.08)}.cmpwhy{margin:0;font-size:14px;color:var(--muted)}
 .cmpbox .acts button,.cmph button{border-radius:12px;padding:9px 16px;font:600 15px Inter,system-ui,sans-serif;border:1px solid #3a3f46;background:none;color:inherit;cursor:pointer}.cmpbox .acts button.pri{background:#eef0f2;color:#0a0b0d;border:0}`;
 document.head.appendChild(cmpCss);
+
+/* ---------- 30. Rosa recommends a vendor, up front ---------- */
+function rosaPick(b){
+  const R = priceRows(b), best = R[0], c = buyCalc(b), wd = unitWord(b[1]), nx = R[1];
+  const why = b[5] ? 'Brand-required item, so it goes through Hilton Supply Management.' : `Lowest cost per ${wd} (${money(best.unit)}) including shipping, and it arrives ${addDays(best.days)}, before you run out.${nx ? ` Saves ${money(nx.tot - best.tot)} against ${VEND[nx.v]}.` : ''}${R.find(r => r.late && r.unit < best.unit) ? ' A cheaper option arrives too late.' : ''}`;
+  return {best, c, why};
+}
+const _sp22 = supplyPanel;
+supplyPanel = function(){
+  let h = _sp22();
+  if(S.buySel != null){ const b = BUY[S.buySel], P = rosaPick(b);
+    h = h.replace(/<div class="cmph">([\s\S]*?)<\/div>/, m => m + `<div class="rpick"><span>${LOGO(18)} ROSA RECOMMENDS</span><b>${VEND[P.best.v]}: ${P.c.qty} × ${b[1]} for ${money(P.best.tot)}</b><p>${P.why}</p></div>`); }
+  return h;
+};
+const _ex22 = excList;
+excList = function(){
+  const L = _ex22(), e = L.find(x => x.id === 'buy');
+  if(e) e.viz = `<div class="tw"><table class="lc rpt"><thead><tr><th>Item</th><th>Rosa recommends</th><th>Total</th><th>Arrives</th></tr></thead><tbody>${e.items.map(c => { const b = BUY.find(x => x[0] === c.n), P = rosaPick(b); return `<tr><td>${c.n}<br><small>${P.c.qty} × ${b[1]}</small></td><td><b>${VEND[P.best.v]}</b><br><small>${P.why}</small></td><td>${money(P.best.tot)}</td><td>${addDays(P.best.days)}</td></tr>`; }).join('')}</tbody></table></div>`;
+  return L;
+};
+const rpCss = document.createElement('style'); rpCss.textContent = `
+.rpick{display:grid;gap:4px;padding:12px 14px;border-radius:12px;background:#0f2418;border:1px solid #3d6b4c}.rpick span{display:inline-flex;align-items:center;gap:6px;font:600 11px "JetBrains Mono",ui-monospace,monospace;letter-spacing:.14em;color:#8fd3a5}.rpick span img{border-radius:3px}.rpick b{font-size:18px;color:#f4f5f7}.rpick p{margin:0;font-size:14px;color:#cfd3d8}
+table.rpt td{font-size:14px}table.rpt small{font-size:12.5px}`;
+document.head.appendChild(rpCss);
 
 document.addEventListener('click', e => {
   if(e.target.closest('#shx')){ document.getElementById('starthere').hidden = true; return; }
